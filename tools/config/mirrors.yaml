@@ -1,0 +1,63 @@
+---
+# 网络位置配置
+network_locations:
+  - china
+  - global
+  - unknown
+
+# APT镜像源配置
+apt_mirrors:
+  china:
+    ubuntu:
+      "18.04":
+        - "deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic main restricted universe multiverse"
+        - "deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic-updates main restricted universe multiverse"
+        - "deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic-backports main restricted universe multiverse"
+        - "deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic-security main restricted universe multiverse"
+      "20.04":
+        - "deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal main restricted universe multiverse"
+        - "deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-updates main restricted universe multiverse"
+        - "deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-backports main restricted universe multiverse"
+        - "deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-security main restricted universe multiverse"
+      "22.04":
+        - "deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ jammy main restricted universe multiverse"
+        - "deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ jammy-updates main restricted universe multiverse"
+        - "deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ jammy-backports main restricted universe multiverse"
+        - "deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ jammy-security main restricted universe multiverse"
+    raspbian:
+      "buster":
+        - "deb https://mirrors.tuna.tsinghua.edu.cn/raspbian/raspbian/ buster main contrib non-free rpi"
+      "bullseye":
+        - "deb https://mirrors.tuna.tsinghua.edu.cn/raspbian/raspbian/ bullseye main contrib non-free rpi"
+  global:
+    ubuntu: {}  # 默认源，无需修改
+    raspbian: {}  # 默认源，无需修改
+
+# PIP镜像源配置
+pip_mirrors:
+  china:
+    - "https://mirrors.aliyun.com/pypi/simple/"
+    - "https://pypi.tuna.tsinghua.edu.cn/simple/"
+    - "https://mirrors.cloud.tencent.com/pypi/simple/"
+  global:
+    - "https://pypi.org/simple/"
+
+# Docker镜像源配置
+docker_mirrors:
+  china:
+    - "https://docker.zhai.cm"
+    - "https://1ms.run"
+  global: []  # 默认Docker镜像源，无需修改
+
+# 默认镜像源选择
+default_pip_mirror:
+  china: 
+    - "https://mirrors.aliyun.com/pypi/simple/"
+    - "https://pypi.tuna.tsinghua.edu.cn/simple/"
+  global: "https://pypi.org/simple/"
+
+default_docker_mirror:
+  china: 
+    - "https://docker.zhai.cm"
+    - "https://1ms.run"
+  global: []  # 默认Docker镜像源
