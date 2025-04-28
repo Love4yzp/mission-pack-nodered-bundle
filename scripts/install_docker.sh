@@ -21,20 +21,66 @@ error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Get the factory IP from command line arguments
-FACTORY_IP=$1
+show_help() {
+    echo "Usage: $0 [options]"
+    echo ""
+    echo "Options:"
+    echo "  -n, --no-reboot       Skip automatic reboot after installation"
+    echo "  --help                Show this help message"
+    echo ""
+    echo "Example:"
+    echo "  Skip reboot:      $0 -n"
+}
 
-# Display script usage
+# Default values
+NO_REBOOT=false
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+        -m|--mode)
+            MODE="$2"
+            shift 2
+            ;;
+        -n|--no-reboot)
+            NO_REBOOT=true
+            shift
+            ;;
+        --help)
+            show_help
+            exit 0
+            ;;
+        *)
+            error "Unknown option: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+done
+
+# Display script information
 log "Docker Installation Script"
 log "------------------------"
-log "Usage: $0 [FACTORY_IP]"
-log "  FACTORY_IP: Optional - IP address for Docker registry (for remote registry configuration)"
-log "  If no FACTORY_IP is provided, Docker will be installed with default configuration"
+log "Mode: $MODE"
+if [ "$NO_REBOOT" = true ]; then
+    log "Auto-reboot: Disabled"
+else
+    log "Auto-reboot: Enabled"
+fi
 log "------------------------"
 
 # Get current user
 CURRENT_USER=$(whoami)
 log "Installing Docker for user: $CURRENT_USER"
+
+# Check if Docker is already installed
+if command -v docker &> /dev/null && docker --version &> /dev/null; then
+    log "Docker is already installed:"
+    docker --version
+    log "Skipping Docker installation."
+    exit 0
+fi
 
 # Update package index
 log "Updating package index..."
@@ -99,36 +145,18 @@ else
     log "Detected location: Outside China - will use default settings"
 fi
 
-if [ -z "$FACTORY_IP" ]; then
-    # Default configuration without insecure registry
-    if [ "$IN_CHINA" = true ]; then
-        log "Using standard Docker configuration with China mirror"
-        echo '{
-    "experimental": true,
-    "registry-mirrors": ["https://docker.zhai.cm"]
+# Create Docker daemon configuration
+if [ "$IN_CHINA" = true ]; then
+    log "Using standard Docker configuration with China mirror"
+    echo '{
+"experimental": true,
+"registry-mirrors": ["https://docker.zhai.cm"]
 }' | sudo tee /etc/docker/daemon.json > /dev/null
-    else
-        log "Using standard Docker configuration"
-        echo '{
-    "experimental": true
-}' | sudo tee /etc/docker/daemon.json > /dev/null
-    fi
 else
-    # Configuration with insecure registry
-    if [ "$IN_CHINA" = true ]; then
-        log "Configuring Docker with insecure registry and China mirror"
-        echo '{
-    "experimental": true,
-    "insecure-registries": ["sensecraft-missionpack.seeed.cn:5000"],
-    "registry-mirrors": ["https://docker.zhai.cm"]
+    log "Using standard Docker configuration"
+    echo '{
+"experimental": true
 }' | sudo tee /etc/docker/daemon.json > /dev/null
-    else
-        log "Configuring Docker with insecure registry"
-        echo '{
-    "experimental": true,
-    "insecure-registries": ["sensecraft-missionpack.seeed.cn:5000"]
-}' | sudo tee /etc/docker/daemon.json > /dev/null
-    fi
 fi
 
 # Add user to Docker group
@@ -145,18 +173,23 @@ sudo systemctl enable docker || { error "Failed to enable Docker service"; exit 
 log "Docker installation complete. Docker service has been restarted."
 warn "IMPORTANT: You must log out and log back in, or reboot your system, for the group changes to take effect."
 
-# Reboot if not in a script
-if [ -t 1 ]; then
-    read -p "Do you want to reboot now? (y/n) " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        log "Rebooting system..."
-        sudo reboot
-    else
-        warn "Remember to reboot later for changes to take full effect."
-    fi
+# Handle reboot logic
+if [ "$NO_REBOOT" = true ]; then
+    warn "Auto-reboot is disabled. Remember to reboot later for changes to take full effect."
 else
-    # If running in a script, reboot automatically
-    log "Rebooting system automatically..."
-    sudo reboot
+    # Reboot if interactive
+    if [ -t 1 ]; then
+        read -p "Do you want to reboot now? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            log "Rebooting system..."
+            sudo reboot
+        else
+            warn "Remember to reboot later for changes to take full effect."
+        fi
+    else
+        # If running in a script and auto-reboot is enabled
+        log "Rebooting system automatically..."
+        sudo reboot
+    fi
 fi

@@ -19,7 +19,6 @@ MODE="local"  # Default to local execution
 REMOTE_HOST=""
 REMOTE_USER=""
 REMOTE_PASS=""
-FACTORY_IP=""
 INSTALL_DOCKER_FILE="${SCRIPT_DIR}/install_docker.sh"
 REMOTE_PATH="/home/recomputer/"
 REMOTE_SCRIPT_PATH="/home/recomputer/install_docker.sh"
@@ -33,13 +32,13 @@ show_help() {
     echo "  -h, --host HOST       Remote host IP address (required for remote mode)"
     echo "  -u, --user USER       Remote username (required for remote mode)"
     echo "  -p, --pass PASS       Remote password (required for remote mode)"
-    echo "  -f, --factory-ip IP   Factory IP address for Docker registry (required for remote mode, optional for local mode)"
+    echo "  -n, --no-reboot       Skip automatic reboot after installation"
     echo "  --help                Show this help message"
     echo ""
     echo "Example:"
     echo "  Local execution:  $0 -m local"
-    echo "  Local execution with factory IP:  $0 -m local -f 192.168.1.100"
-    echo "  Remote execution: $0 -m remote -h 192.168.1.10 -u recomputer -p 12345678 -f 192.168.1.100"
+    echo "  Remote execution: $0 -m remote -h 192.168.1.10 -u recomputer -p 12345678"
+    echo "  Skip reboot:      $0 -n"
 }
 
 # Log functions
@@ -79,9 +78,9 @@ while [[ $# -gt 0 ]]; do
             REMOTE_PASS="$2"
             shift 2
             ;;
-        -f|--factory-ip)
-            FACTORY_IP="$2"
-            shift 2
+        -n|--no-reboot)
+            NO_REBOOT="true"
+            shift
             ;;
         --help)
             show_help
@@ -105,13 +104,6 @@ fi
 if [[ "$MODE" == "remote" ]]; then
     if [[ -z "$REMOTE_HOST" || -z "$REMOTE_USER" || -z "$REMOTE_PASS" ]]; then
         error "Remote mode requires host (-h), user (-u), and password (-p) parameters"
-        show_help
-        exit 1
-    fi
-    
-    # FACTORY_IP is required for remote mode
-    if [[ -z "$FACTORY_IP" ]]; then
-        error "Factory IP address (-f) is required for remote mode"
         show_help
         exit 1
     fi
@@ -182,16 +174,20 @@ if [[ "$MODE" == "local" ]]; then
     else
         warn "Docker未安装，准备安装..."
         # 本地执行安装脚本
-        sudo bash "$INSTALL_DOCKER_FILE"
+        if [ "$NO_REBOOT" = "true" ]; then
+            sudo bash "$INSTALL_DOCKER_FILE" -n
+        else
+            sudo bash "$INSTALL_DOCKER_FILE"
+        fi
         EXIT_STATUS=$?
         
         if [ $EXIT_STATUS -ne 0 ]; then
-            error "Docker安装失败，退出状态: $EXIT_STATUS"
+            error "Docker installation failed, exit status: $EXIT_STATUS"
             exit $EXIT_STATUS
         else
-            log "Docker安装脚本执行成功"
-            warn "注意：Docker安装后需要重启设备才能生效"
-            # 返回状态码0，表示Docker已安装，需要重启
+            log "Docker installation script executed successfully"
+            warn "Note: Docker installation requires a reboot to take effect"
+            # Return status code 0, indicating Docker has been installed and requires reboot
             exit 0
         fi
     fi
@@ -258,7 +254,11 @@ else
         
         # Step 3: execute the install_docker.sh on remote machine
         log "在远程主机上执行Docker安装脚本..."
-        sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no -t $REMOTE_USER@$REMOTE_HOST "sudo bash $REMOTE_SCRIPT_PATH $FACTORY_IP"
+        if [ "$NO_REBOOT" = "true" ]; then
+            sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no -t $REMOTE_USER@$REMOTE_HOST "sudo bash $REMOTE_SCRIPT_PATH -n"
+        else
+            sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no -t $REMOTE_USER@$REMOTE_HOST "sudo bash $REMOTE_SCRIPT_PATH"
+        fi
         EXIT_STATUS=$?
         
         if [ $EXIT_STATUS -ne 0 ]; then

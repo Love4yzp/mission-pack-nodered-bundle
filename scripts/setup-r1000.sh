@@ -136,9 +136,8 @@ run_remote_command() {
 }
 
 header "R1000 Setup"
-log "开始配置 R1000"
 
-log "设置Docker"
+log "Installing Docker"
 if [[ "$MODE" == "local" ]]; then
     # Local mode - directly run the script
     bash $SCRIPT_DIR/hot-fix-docker.sh -m local
@@ -149,31 +148,31 @@ fi
 EXIT_STATUS=$?
 
 if [ $EXIT_STATUS -eq 1 ]; then
-    error "设置Docker失败,请重试"
+    error "Failed to install Docker, please retry"
     exit $EXIT_STATUS
 elif [ $EXIT_STATUS -eq 0 ]; then
-    warn "Docker已安装，需要重启设备..."
+    warn "Docker has been installed, please reboot the device..."
     if [[ "$MODE" == "remote" ]]; then
         bash $SCRIPT_DIR/wait_for_reboot.sh $R1000_IP
         run_remote_command "sudo rm ~/install_docker.sh"
     else
-        log "本地模式下，请手动重启设备后继续"
-        read -p "按回车键继续..." </dev/tty
+        log "Local mode, please manually reboot the device and continue"
+        read -p "Press Enter to continue..." </dev/tty
     fi
 elif [ $EXIT_STATUS -eq 2 ]; then
-    log "Docker已正确安装，无需重启"
-    # 跳过重启步骤，但仍然清理脚本文件（如果存在）
+    log "Docker has been installed, no need to reboot"
+    # Skip reboot step, but still clean up script file (if exists)
     if [[ "$MODE" == "remote" ]]; then
         run_remote_command "if [ -f ~/install_docker.sh ]; then sudo rm ~/install_docker.sh; fi"
     fi
 fi
-log "Docker设置完成"
+log "Docker installation completed"
 
-log "设置Sensecraft"
+header "Setting Sensecraft"
 if [[ "$MODE" == "local" ]]; then
     # 本地执行Sensecraft设置
-    if [ -f "/home/pi/livelab-mission-setup/r1000/script/modify_env.sh" ]; then
-        bash /home/pi/livelab-mission-setup/r1000/script/modify_env.sh $SSID $REGION $R1000_IP
+    if [ -f "/home/recomputer/livelab-mission-setup/r1000/script/modify_env.sh" ]; then
+        bash /home/recomputer/livelab-mission-setup/r1000/script/modify_env.sh $SSID $REGION $R1000_IP
         EXIT_STATUS=$?
     else
         error "找不到Sensecraft设置脚本，请确认路径是否正确"
